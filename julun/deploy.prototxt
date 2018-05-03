@@ -1,0 +1,78 @@
+layer {
+    name: "input"
+    type: "Input"
+    top: "data"
+    input_param {shape: {dim:1 dim:3 dim:32 dim:128}}
+}
+layer {  name: "data_BN"  type: "BatchNorm"  bottom: "data"  top: "data_bn"}
+layer {    bottom: "data_bn"    top: "data_bn"    name: "scale_data"    type: "Scale"    scale_param {        bias_term: true    }}
+
+layer {    name: "indicator"    type: "ContinuationIndicator"    top: "indicator"    continuation_indicator_param {        time_step:  32        batch_size: 1    }}
+
+layer {  name: "conv1"  type: "Convolution"  bottom: "data_bn"  top: "conv1"  param {    lr_mult: 1    decay_mult: 1  }  param {    lr_mult: 2    decay_mult: 0  }
+  convolution_param {    num_output: 32      kernel_w: 3    kernel_h: 3    pad_h: 1    pad_w: 1    stride: 1
+    weight_filler {      type: "xavier"    }    bias_filler {      type: "constant"      value: 0    }  }}
+layer {  name: "conv1_BN"  type: "BatchNorm"  bottom: "conv1"  top: "conv1"}
+layer {    bottom: "conv1"    top: "conv1"    name: "scale_conv1"    type: "Scale"    scale_param {        bias_term: true    }}
+layer {  name: "relu1"  type: "ReLU"  bottom: "conv1"  top: "conv1"}
+layer {  name: "pool1"  type: "Pooling"  bottom: "conv1"  top: "pool1"  pooling_param {    pool: MAX    kernel_size: 2    stride: 2  }}
+layer {  name: "conv2"  type: "Convolution"  bottom: "pool1"  top: "conv2"  param {    lr_mult: 1    decay_mult: 1  }  param {    lr_mult: 2    decay_mult: 0  }
+  convolution_param {    num_output: 64     kernel_w: 3    kernel_h: 3    pad_h: 1    pad_w: 1    stride: 1
+    weight_filler {      type: "xavier"    }    bias_filler {      type: "constant"      value: 0    }  }}
+layer {  name: "conv2_BN"  type: "BatchNorm"  bottom: "conv2"  top: "conv2"}
+layer {    bottom: "conv2"    top: "conv2"    name: "scale_conv2"    type: "Scale"    scale_param {        bias_term: true    }}
+#layer { name:"dropc2" bottom:"conv2" top:"conv2" type:"Dropout" dropout_param{ dropout_ratio:0.5}}
+layer {  name: "relu2"  type: "ReLU"  bottom: "conv2"  top: "conv2"}
+layer {  name: "pool2"  type: "Pooling"  bottom: "conv2"  top: "pool2"  pooling_param {    pool: MAX    kernel_size: 2    stride: 2  }}
+layer {  name: "conv3"  type: "Convolution"  bottom: "pool2"  top: "conv3"  param {    lr_mult: 1    decay_mult: 1  }  param {    lr_mult: 2    decay_mult: 0  }
+  convolution_param {    num_output: 128      kernel_w: 3    kernel_h: 3    pad_h: 1    pad_w: 1    stride: 1
+    weight_filler {      type: "xavier"    }    bias_filler {      type: "constant"      value: 0    }  }}
+layer {  name: "conv3_BN"  type: "BatchNorm"  bottom: "conv3"  top: "conv3"}
+layer {    bottom: "conv3"    top: "conv3"    name: "scale_conv3"    type: "Scale"    scale_param {        bias_term: true    }}
+layer { name:"dropc3" bottom:"conv3" top:"conv3" type:"Dropout" dropout_param{ dropout_ratio:0.5}}
+layer {  name: "relu3"  type: "ReLU"  bottom: "conv3"  top: "conv3"}
+#layer {  name: "pool3"  type: "Pooling"  bottom: "conv3"  top: "pool3"  pooling_param {    pool: MAX    kernel_w: 2  kernel_h: 2  stride_w: 1  stride_h: 2 pad_w: 1 pad_h: 0}}
+layer {  name: "conv4"  type: "Convolution"  bottom: "conv3"  top: "conv4"  param {    lr_mult: 1    decay_mult: 1  }  param {    lr_mult: 2    decay_mult: 0  }
+  convolution_param {    num_output: 256      kernel_w: 3    kernel_h: 3    pad_h: 1    pad_w: 1    stride: 1
+    weight_filler {      type: "xavier"    }    bias_filler {      type: "constant"      value: 0    }  }}
+layer {  name: "conv4_BN"  type: "BatchNorm"  bottom: "conv4"  top: "conv4"}
+layer {    bottom: "conv4"    top: "conv4"    name: "scale_conv4"    type: "Scale"    scale_param {        bias_term: true    }}
+layer { name:"dropc4" bottom:"conv4" top:"conv4" type:"Dropout" dropout_param{ dropout_ratio:0.6}}
+layer {  name: "relu4"  type: "ReLU"  bottom: "conv4"  top: "conv4"}
+
+layer {    name: "permuted_data"    type: "Permute"    bottom: "conv4"    top: "permuted_data"    permute_param {order: 3 order: 0 order: 1 order: 2}}
+
+layer {    name: "lstm1-"    type: "LSTM"    bottom: "permuted_data"    bottom: "indicator"    top: "lstm1"    
+recurrent_param {num_output: 128        weight_filler {          type: "xavier"        }        bias_filler {          type: "constant"          value: 0        }    }}
+layer { name:"drop1" bottom:"lstm1" top:"lstm1" type:"Dropout" dropout_param{ dropout_ratio:0.6}}
+layer {  name: "relulstm1"  type: "ReLU"  bottom: "lstm1"  top: "lstm1"}
+
+layer {    name: "lstm2"    type: "LSTM"    bottom: "lstm1"    bottom: "indicator"    top: "lstm2"    
+recurrent_param {        num_output: 128        weight_filler {          type: "xavier"        }        bias_filler {          type: "constant"          value: 0        }    }}
+layer { name:"drop1" bottom:"lstm2" top:"lstm2" type:"Dropout" dropout_param{ dropout_ratio:0.6}}
+layer {  name: "relulstm2"  type: "ReLU"  bottom: "lstm2"  top: "lstm2"}
+
+
+
+layer {  name: "fc1"  type: "InnerProduct"  bottom: "lstm2"  top: "fc1"  param {    lr_mult: 1    decay_mult: 1  }  param {    lr_mult: 2    decay_mult: 0  }
+  inner_product_param {    num_output: 48	  axis: 2    weight_filler {      type: "xavier"    }    bias_filler {      type: "constant"      value: 0    }  }}
+
+
+layer {    name: "rev"    type: "Reverse"    bottom: "permuted_data"    top: "rev_data"    }
+layer {    name: "lstm3-"    type: "LSTM"    bottom: "rev_data"    bottom: "indicator"    top: "lstm3"    
+recurrent_param {num_output: 128        weight_filler {          type: "xavier"        }        bias_filler {          type: "constant"          value: 0        }    }}
+layer { name:"drop3" bottom:"lstm3" top:"lstm3" type:"Dropout" dropout_param{ dropout_ratio:0.6}}
+layer {  name: "relulstm3"  type: "ReLU"  bottom: "lstm3"  top: "lstm3"}
+
+layer {    name: "lstm4"    type: "LSTM"    bottom: "lstm3"    bottom: "indicator"    top: "lstm4"    
+recurrent_param {        num_output: 128        weight_filler {          type: "xavier"        }        bias_filler {          type: "constant"          value: 0        }    }}
+layer { name:"drop4" bottom:"lstm4" top:"lstm4" type:"Dropout" dropout_param{ dropout_ratio:0.6}}
+layer {  name: "relulstm4"  type: "ReLU"  bottom: "lstm4"  top: "lstm4"}
+
+layer {  name: "fc2"  type: "InnerProduct"  bottom: "lstm4"  top: "fc2"  param {    lr_mult: 1    decay_mult: 1  }  param {    lr_mult: 2    decay_mult: 0  }
+  inner_product_param {    num_output: 48	  axis: 2    weight_filler {      type: "xavier"    }    bias_filler {      type: "constant"      value: 0    }  }}
+
+layer { name:"eltwise-sum" type:"Eltwise" bottom:"fc1" bottom:"fc2" top:"sum" eltwise_param { operation:SUM coeff:1 coeff:1 } }
+
+layer {  name: "permute_fc"  type: "Permute"  bottom: "sum"  top: "premuted_fc"  include {    phase: TEST  }  permute_param {    order: 1    order: 0    order: 2  }}
+
